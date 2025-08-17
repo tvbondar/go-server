@@ -2,24 +2,37 @@ package main
 
 import (
 	"database/sql"
-	"internal/handlers"
-	"internal/repositories"
-	"internal/usecases"
+	"net/http"
+
+	"github.com/tvbondar/go-server/internal/handlers"
+	"github.com/tvbondar/go-server/internal/repositories"
+	"github.com/tvbondar/go-server/internal/usecases"
 
 	_ "github.com/lib/pq"
 )
 
 func main() {
-	db, err := sql.Open("postgres", "host=localhost port=5432 user=myuser password=pass dbname=orders_db sslmode=disable")
+	// PostgreSQL
+	db, err := sql.Open("postgres", "user=myuser password=pass dbname=orders_db sslmode=disable")
 	if err != nil {
 		panic(err)
 	}
+	defer db.Close()
 
-	repo := repositories.NewPostgresOrderRepository(db)
-	usecase := usecases.NewProcessOrderUseCase(repo)
+	dbRepo := repositories.NewPostgresOrderRepository(db)
+	cacheRepo := repositories.NewCacheOrderRepository()
 
-	go handlers.KafkaConsumer(usecase)
+	// Восстановление кэша
+	cacheRepo.LoadFromDB(dbRepo)
 
-	// Запуск HTTP-сервера
-	// ...
+	processUseCase := usecases.NewProcessOrderUseCase(dbRepo, cacheRepo)
+	getUseCase := usecases.NewGetOrderUseCase(cacheRepo, dbRepo) // Создай GetOrderUseCase: сначала кэш, затем DB
+
+	// Kafka
+	go handlers.StartKafkaConsumer(processUseCase)
+
+	// HTTP
+	httpHandler := handlers.NewHTTPHandler(getUseCase)
+	http.HandleFunc("/order/", httpHandler.GetOrder)
+	http.ListenAndServe(":8081", nil)
 }

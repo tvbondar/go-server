@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <input id="orderId" placeholder="Enter Order ID">
+    <button onclick="getOrder()">Get Order</button>
+    <pre id="result"></pre>
+    <script>
+        function getOrder() {
+            let id = document.getElementById('orderId').value;
+            fetch(`http://localhost:8081/order/${id}`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('result').innerHTML = JSON.stringify(data, null, 2);
+                })
+                .catch(err => {
+                    document.getElementById('result').innerHTML = `Error: ${err}`;
+                });
+        }
+    </script>
+</body>
+</html>
