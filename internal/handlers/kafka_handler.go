@@ -1,36 +1,36 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/segmentio/kafka-go"
 	"github.com/tvbondar/go-server/internal/usecases"
-
-	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
 func StartKafkaConsumer(usecase *usecases.ProcessOrderUseCase) {
-	c, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers": "localhost:9092",
-		"group.id":          "my-group",
-		"auto.offset.reset": "earliest",
+	reader := kafka.NewReader(kafka.ReaderConfig{
+		Brokers:  []string{"localhost:9092"},
+		Topic:    "orders",
+		GroupID:  "my-group",
+		MinBytes: 10e3,
+		MaxBytes: 10e6,
 	})
-	if err != nil {
-		panic(err)
-	}
-	defer c.Close()
+	defer reader.Close()
 
-	err = c.SubscribeTopics([]string{"orders"}, nil)
-	if err != nil {
-		panic(err)
-	}
-
+	ctx := context.Background()
 	for {
-		msg, err := c.ReadMessage(-1)
-		if err == nil {
-			usecase.Execute(msg.Value)
-			c.CommitMessage(msg) // Подтверждение для Kafka, чтобы не терять сообщения
-		} else {
-			fmt.Printf("Error reading message: %v\n", err)
+		msg, err := reader.FetchMessage(ctx)
+		if err != nil {
+			fmt.Printf("Error fetching message: %v\n", err)
+			continue
+		}
+		if err := usecase.Execute(msg.Value); err != nil {
+			fmt.Printf("Error processing message: %v\n", err)
+			continue
+		}
+		if err := reader.CommitMessages(ctx, msg); err != nil {
+			fmt.Printf("Error committing message: %v\n", err)
 		}
 	}
 }
