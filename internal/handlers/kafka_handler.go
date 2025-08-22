@@ -3,20 +3,42 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/segmentio/kafka-go"
 	"github.com/tvbondar/go-server/internal/usecases"
 )
 
 func StartKafkaConsumer(usecase *usecases.ProcessOrderUseCase) {
-	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:  []string{"localhost:9092"},
+	config := kafka.ReaderConfig{
+		Brokers:  []string{"kafka:9092"},
 		Topic:    "orders",
 		GroupID:  "my-group",
-		MinBytes: 10e3,
-		MaxBytes: 10e6,
-	})
+		MinBytes: 10e3, // 10KB
+		MaxBytes: 10e6, // 10MB
+	}
+
+	var reader *kafka.Reader
+	var err error
+
+	// Ожидание готовности Kafka
+	for i := 0; i < 10; i++ {
+		reader = kafka.NewReader(config)
+		var conn *kafka.Conn
+		conn, err = kafka.Dial("tcp", "kafka:9092") // use '=' instead of ':='
+		if err == nil {
+			conn.Close()
+			break
+		}
+		fmt.Printf("Failed to connect to Kafka: %v\n", err)
+		time.Sleep(2 * time.Second)
+	}
+	if err != nil {
+		fmt.Printf("Failed to connect to Kafka after retries: %v\n", err)
+		return
+	}
 	defer reader.Close()
+	fmt.Println("Successfully connected to Kafka topic 'orders'")
 
 	ctx := context.Background()
 	for {
@@ -25,12 +47,15 @@ func StartKafkaConsumer(usecase *usecases.ProcessOrderUseCase) {
 			fmt.Printf("Error fetching message: %v\n", err)
 			continue
 		}
+		fmt.Printf("Received message with key: %s\n", string(msg.Key))
 		if err := usecase.Execute(msg.Value); err != nil {
 			fmt.Printf("Error processing message: %v\n", err)
 			continue
 		}
 		if err := reader.CommitMessages(ctx, msg); err != nil {
 			fmt.Printf("Error committing message: %v\n", err)
+		} else {
+			fmt.Printf("Message processed and committed\n")
 		}
 	}
 }
