@@ -55,5 +55,6 @@ func (r *CacheOrderRepository) LoadFromDB(dbRepo OrderRepository) error {
 	for _, order := range orders {
 		r.cache[order.OrderUID] = order
 	}
+	fmt.Println("Cache loaded with", len(orders), "orders")
 	return nil
 }
