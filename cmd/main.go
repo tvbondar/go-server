@@ -13,12 +13,10 @@ import (
 )
 
 func main() {
-	// Строка подключения с host=postgres
 	connStr := "user=postgres password=pass dbname=orders_db host=postgres port=5432 sslmode=disable"
 	var db *sql.DB
 	var err error
 
-	// Ожидание готовности PostgreSQL
 	for i := 0; i < 10; i++ {
 		db, err = sql.Open("postgres", connStr)
 		if err != nil {
@@ -43,7 +41,6 @@ func main() {
 	dbRepo := repositories.NewPostgresOrderRepository(db)
 	cacheRepo := repositories.NewCacheOrderRepository()
 
-	// Восстановление кэша
 	if err := cacheRepo.LoadFromDB(dbRepo); err != nil {
 		log.Fatal(err)
 	}

@@ -49,3 +49,4 @@ services:
         condition: service_started
     ports:
       - "8081:8081"
+      

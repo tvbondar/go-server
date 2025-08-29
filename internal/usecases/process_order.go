@@ -23,7 +23,6 @@ func (u *ProcessOrderUseCase) Execute(rawMessage []byte) error {
 		fmt.Printf("Invalid JSON message: %v\n", err)
 		return nil
 	}
-	// Валидация
 	if order.OrderUID == "" {
 		fmt.Println("Invalid order: empty OrderUID")
 		return nil

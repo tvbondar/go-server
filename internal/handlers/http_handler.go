@@ -9,7 +9,7 @@ import (
 )
 
 type HTTPHandler struct {
-	usecase *usecases.GetOrderUseCase // Создай GetOrderUseCase аналогично Process
+	usecase *usecases.GetOrderUseCase
 }
 
 func NewHTTPHandler(usecase *usecases.GetOrderUseCase) *HTTPHandler {

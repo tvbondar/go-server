@@ -14,18 +14,17 @@ func StartKafkaConsumer(usecase *usecases.ProcessOrderUseCase) {
 		Brokers:  []string{"kafka:9092"},
 		Topic:    "orders",
 		GroupID:  "my-group",
-		MinBytes: 10e3, // 10KB
-		MaxBytes: 10e6, // 10MB
+		MinBytes: 10e3,
+		MaxBytes: 10e6,
 	}
 
 	var reader *kafka.Reader
 	var err error
 
-	// Ожидание готовности Kafka
 	for i := 0; i < 10; i++ {
 		reader = kafka.NewReader(config)
 		var conn *kafka.Conn
-		conn, err = kafka.Dial("tcp", "kafka:9092") // use '=' instead of ':='
+		conn, err = kafka.Dial("tcp", "kafka:9092")
 		if err == nil {
 			conn.Close()
 			break
